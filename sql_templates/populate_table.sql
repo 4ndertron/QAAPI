@@ -1,0 +1,5 @@
+COPY INTO D_POST_INSTALL.<<tn>>
+FROM @MY_UPLOADER_STAGE
+FILE_FORMAT = (format_name = 'CX_JSON_STRIP_OUTER')
+PATTERN = '.*<<pat>>.*'
+ON_ERROR = 'skip_file'

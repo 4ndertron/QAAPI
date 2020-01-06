@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="VSLR@vslr.snowflakecomputing.com" uuid="5a6926f4-b8a6-48f8-8209-7c7cbbc23cd4">
+      <driver-ref>snowflake</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>net.snowflake.client.jdbc.SnowflakeDriver</jdbc-driver>
+      <jdbc-url>jdbc:snowflake://vslr.snowflakecomputing.com?warehouse=ANALYST_WH&amp;db=VSLR</jdbc-url>
+    </data-source>
+  </component>
+</project>

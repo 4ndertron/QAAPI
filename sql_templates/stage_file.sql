@@ -1,0 +1,1 @@
+put file:///<<fp>> @my_uploader_stage auto_compress = <<ac>>;
