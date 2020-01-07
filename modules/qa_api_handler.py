@@ -26,7 +26,7 @@ class ApiHandler:
         self.table_pairs = {
             'contacts.json': 'temp_calabrio_t_qa_contacts_staging',
             'fix_eval_raw.json': 'temp_calabrio_t_qa_evaluations_staging',
-            'fix_comments_raw.json': 't_temp_calabrio_t_qa_evaluation_comments_staging',
+            'fix_comments_raw.json': 'temp_calabrio_t_qa_evaluation_comments_staging',
         }
         self.file_fixes = []
         self.file_fix_re = re.compile(r']\n\[')
@@ -53,6 +53,7 @@ class ApiHandler:
         begin_date = dt.date.today() + dt.timedelta(days=-45)
         params = {'beginDate': begin_date.strftime('%Y-%m-%d'),
                   'evalState': 'scored',
+                  'limit': 10000,
                   'completedCalibration': 'true'}
         query_url = base_url + '?' + '&'.join([f'{x}={params[x]}' for x in params])
         begin = time.time()
@@ -154,7 +155,7 @@ class ApiHandler:
         fun_list = [self._get_contacts, self._get_evaluations, self._get_comments]
         for fun in fun_list:
             print(f'running function: {fun.__name__}')
-            # fun()
+            fun()
             print(f'function: {fun.__name__} ran with no errors.\n')
         json_files = os.listdir(self.json_dir)
         for file in json_files:
@@ -162,6 +163,8 @@ class ApiHandler:
             #     first_result = json.loads(f.read())
             #     print(f'displaying file: {file}')
             #     self._print_results(first_result)
+            with open(os.path.join(self.sql_dir, 'truncate_table.sql')) as tf:
+                self.sn.sql_command(tf.read().replace('<<tn>>', self.table_pairs[file]))
             with open(os.path.join(self.sql_dir, 'stage_file.sql'), 'r') as sf:
                 query_text_raw = sf.read()
                 query_text_raw = query_text_raw.replace('<<fp>>', os.path.join(self.json_dir, file))

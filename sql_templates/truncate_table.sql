@@ -1,0 +1,1 @@
+TRUNCATE TABLE d_post_install.<<tn>>;
