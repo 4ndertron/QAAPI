@@ -16,7 +16,7 @@ class ApiHandler:
     temp_dir = os.path.join(project_dir, 'temp')
     split_dir = os.path.join(project_dir, 'split')
 
-    def __init__(self, console_output=False, schema=None):
+    def __init__(self, console_output=False, schema=None, contact_source='api'):
         self.contact_json = None
         self.eval_json = None
         self.question_json = None
@@ -31,6 +31,7 @@ class ApiHandler:
         self.file_fixes = []
         self.file_fix_re = re.compile(r']\n\[')
         self.file_uploads = []
+        self.contact_source = contact_source
         self._login()
 
     def _login(self):
@@ -49,29 +50,40 @@ class ApiHandler:
             print(f'authorization response code: {auth_resp.status_code}')
 
     def _get_contacts(self):
-        base_url = 'https://calabriocloud.com/api/rest/recording/contact'
-        begin_date = dt.date.today() + dt.timedelta(days=-45)
-        params = {'beginDate': begin_date.strftime('%Y-%m-%d'),
-                  'evalState': 'scored',
-                  'limit': 10000,
-                  'completedCalibration': 'true'}
-        query_url = base_url + '?' + '&'.join([f'{x}={params[x]}' for x in params])
-        begin = time.time()
-        self.contact_json = json.loads(self.session.get(query_url).text)
-        end = time.time()
-        if self.console_output:
-            print(
-                f'''self.contact_json was populated in {round(end - begin, 4)} seconds.\n
-                    The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.''')
-        with open(os.path.join(self.json_dir, 'contacts.json'), 'w') as cf:
-            cf.write(json.dumps(self.contact_json))
+        if self.contact_source == 'api':
+            base_url = 'https://calabriocloud.com/api/rest/recording/contact'
+            begin_date = dt.date.today() + dt.timedelta(days=-45)
+            params = {'beginDate': begin_date.strftime('%Y-%m-%d'),
+                      'evalState': 'scored',
+                      'limit': 10000,
+                      'completedCalibration': 'true'}
+            query_url = base_url + '?' + '&'.join([f'{x}={params[x]}' for x in params])
+            begin = time.time()
+            self.contact_json = json.loads(self.session.get(query_url).text)
+            end = time.time()
+            if self.console_output:
+                print(
+                    f'''self.contact_json was populated in {round(end - begin, 4)} seconds.\n
+                        The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.''')
+            with open(os.path.join(self.json_dir, 'contacts.json'), 'w') as cf:
+                cf.write(json.dumps(self.contact_json))
+        elif self.contact_source == 'sql':
+            print('do sql source')
+            self.contact_json = self.sn.run_query_file(os.path.join(self.sql_dir, 'trouble_children.sql'))
+        else:
+            return 'oops, wrong source...'
 
     def _get_evaluations(self):
         eval_url_raw = 'https://calabriocloud.com/api/rest/recording/contact/<<contact_id>>/eval/'
         rn = len(self.contact_json)
         for row in self.contact_json:
             print(f'debugging: len(row) from self.contact_json\n{len(row)}')
-            eval_url_query = eval_url_raw.replace('<<contact_id>>', str(row['id']))
+            eval_replacement = ''
+            if self.contact_source == 'api':
+                eval_replacement = str(row['id'])
+            elif self.contact_source == 'sql':
+                eval_replacement = str(row)
+            eval_url_query = eval_url_raw.replace('<<contact_id>>', eval_replacement)
             print(f'debugging: eval_url_query\n{eval_url_query}')
             begin = time.time()
             eval_res = self.session.get(eval_url_query)
@@ -95,15 +107,6 @@ class ApiHandler:
             rn -= 1
             print(f'self.eval_json len == {len(self.eval_json)}')
         self._fix_file(os.path.join(self.temp_dir, 'eval_raw.json'))
-        # with open(os.path.join(self.json_dir, 'evaluations.json'), 'wb') as ef:
-        #     # for eval_row in self.eval_json:
-        #     try:
-        #         ef.write(self.eval_json)
-        #     except Exception as exc:
-        #         with open(os.path.join(self.error_dir, 'errors_new.txt'), 'a') as er:
-        #             er.write(f'{exc},{self.eval_json[:1]}\n')
-        #         if self.console_output:
-        #             print(f'Line was written to the error file:\n{exc}\n')
 
     def _get_comments(self):
         print('tbd')
