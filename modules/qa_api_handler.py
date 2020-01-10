@@ -24,6 +24,7 @@ class ApiHandler:
         self.sn = SnowflakeHandler(console_output=self.console_output, schema=schema)
         self.object_creation_time = time.time()
         self.table_pairs = {
+            'forms.json': 'temp_calabrio_t_qa_forms_staging',
             'contacts.json': 'temp_calabrio_t_qa_contacts_staging',
             'fix_eval_raw.json': 'temp_calabrio_t_qa_evaluations_staging',
             'fix_comments_raw.json': 'temp_calabrio_t_qa_evaluation_comments_staging',
@@ -48,6 +49,18 @@ class ApiHandler:
         auth_resp = self.session.send(auth_prepped)
         if self.console_output:
             print(f'authorization response code: {auth_resp.status_code}')
+
+    def _get_forms(self):
+        base_url = 'https://calabriocloud.com/api/rest/recording/evalform'
+        begin = time.time()
+        self.contact_json = json.loads(self.session.get(base_url).text)
+        end = time.time()
+        if self.console_output:
+            print(
+                f'''self.contact_json was populated in {round(end - begin, 4)} seconds.\n
+                    The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.''')
+        with open(os.path.join(self.json_dir, 'forms.json'), 'w') as cf:
+            cf.write(json.dumps(self.contact_json))
 
     def _get_contacts(self):
         if self.contact_source == 'api':
@@ -155,7 +168,7 @@ class ApiHandler:
 
     def full_run(self):
         self.remove_temp_files()
-        fun_list = [self._get_contacts, self._get_evaluations, self._get_comments]
+        fun_list = [self._get_forms, self._get_contacts, self._get_evaluations, self._get_comments]
         for fun in fun_list:
             print(f'running function: {fun.__name__}')
             fun()
@@ -172,6 +185,7 @@ class ApiHandler:
                 query_text_raw = sf.read()
                 query_text_raw = query_text_raw.replace('<<fp>>', os.path.join(self.json_dir, file))
                 query_text_final = query_text_raw.replace('<<ac>>', 'true')
+                # Eventually turn the true/false value into a user defined dynamic field.
                 print(query_text_final)
                 self.sn.sql_command(query_text_final)
             with open(os.path.join(self.sql_dir, 'populate_table.sql')) as cf:
