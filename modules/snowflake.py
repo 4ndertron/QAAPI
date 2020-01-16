@@ -5,10 +5,6 @@ import snowflake.connector
 
 class SnowflakeHandler:
     """
-    This class is setup to do the following tasks:
-        1) Create an excel workbook populated by two SQL queries.
-        2) Run a headless chromedriver to upload the excel workbook to ShareFile.
-
     Prerequisites:
         1) You need to create a JSON formatted Environment Variable, named "SNOWFLAKE_KEY", with the following keys.
             1) USERNAME
@@ -100,7 +96,6 @@ class SnowflakeHandler:
 
     def stage_file_data(self, full_file_path):
         if self.cur:
-            self.cur.execute('USE SCHEMA D_POST_INSTALL')
             self.cur.execute(f'put file://{full_file_path} @MY_UPLOADER_STAGE auto_compress=TRUE')
         else:
             print('connection and cursor are not established. The data cannot be staged.')

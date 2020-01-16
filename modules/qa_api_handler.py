@@ -65,7 +65,7 @@ class ApiHandler:
     def _get_contacts(self):
         if self.contact_source == 'api':
             base_url = 'https://calabriocloud.com/api/rest/recording/contact'
-            begin_date = dt.date.today() + dt.timedelta(days=-45)
+            begin_date = dt.date.today() + dt.timedelta(days=-30)
             params = {'beginDate': begin_date.strftime('%Y-%m-%d'),
                       'evalState': 'scored',
                       'limit': 10000,
@@ -109,7 +109,8 @@ class ApiHandler:
     Writing to eval_raw.json and making the eval_json_response variable had a duration of
     {round(end - begin, 4)} seconds.
     The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
-    rn: {rn}'''
+    rn: {rn}
+    Progress: {round(((len(self.contact_json) - rn) / len(self.contact_json)) * 10, 2)}%'''
                       )
             if self.eval_json is None:
                 self.eval_json = eval_json_response
@@ -122,6 +123,7 @@ class ApiHandler:
         self._fix_file(os.path.join(self.temp_dir, 'eval_raw.json'))
 
     def _get_comments(self):
+        # Last rn attempted:
         print('tbd')
         comments_url_base = 'https://calabriocloud.com'
         print(f"""
@@ -139,9 +141,10 @@ class ApiHandler:
                     wf.write(comments_res.content)
                     end = time.time()
                     print(f'''
-        Writing to eval_raw.json had a duration of {round(end - begin, 4)} seconds.
-        The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
-        rn: {rn}'''
+    Writing to eval_raw.json had a duration of {round(end - begin, 4)} seconds.
+    The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
+    rn: {rn}
+    Progress: {round(((len(self.eval_json) - rn) / len(self.eval_json)) * 10, 2)}%'''
                           )
                 else:
                     print(f'jr: {jr["id"]} did not have any comments.')
@@ -167,7 +170,7 @@ class ApiHandler:
         #     with open(os.path.join(self.json_dir, file), 'r') as rf:
 
     def full_run(self):
-        self.remove_temp_files()
+        self._remove_temp_files()
         fun_list = [self._get_forms, self._get_contacts, self._get_evaluations, self._get_comments]
         for fun in fun_list:
             print(f'running function: {fun.__name__}')
@@ -195,10 +198,10 @@ class ApiHandler:
                 print(copy_text_final)
                 self.sn.sql_command(copy_text_final)
         self.sn.sql_command('remove @my_uploader_stage')
-        self.remove_temp_files()
-        print(f'The rest_run function ended after {round(time.time() - self.object_creation_time, 4)} seconds.')
+        self._remove_temp_files()
+        print(f'The {self.__name__} function ended after {round(time.time() - self.object_creation_time, 4)} seconds.')
 
-    def remove_temp_files(self):
+    def _remove_temp_files(self):
         tmp_files = os.listdir(self.temp_dir)
         print(f'file list:\n{tmp_files}')
         for file in tmp_files:
