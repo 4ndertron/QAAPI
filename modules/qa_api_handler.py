@@ -66,23 +66,27 @@ class ApiHandler:
         if self.contact_source == 'api':
             base_url = 'https://calabriocloud.com/api/rest/recording/contact'
             begin_date = dt.date.today() + dt.timedelta(days=-30)
+            # begin_date = dt.date.today() + dt.timedelta(days=-57)  # Temp date delta to back-fill holes.
+            # params = {'beginDate': '2019-03-01',  # free-text start date
             params = {'beginDate': begin_date.strftime('%Y-%m-%d'),
                       'evalState': 'scored',
-                      'limit': 10000,
-                      'completedCalibration': 'true'}
+                      'limit': 50000}
             query_url = base_url + '?' + '&'.join([f'{x}={params[x]}' for x in params])
             begin = time.time()
             self.contact_json = json.loads(self.session.get(query_url).text)
             end = time.time()
             if self.console_output:
-                print(
-                    f'''self.contact_json was populated in {round(end - begin, 4)} seconds.\n
-                        The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.''')
+                print(f'''
+    self.contact_json was populated in {round(end - begin, 4)} seconds.\n
+    The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
+''')
             with open(os.path.join(self.json_dir, 'contacts.json'), 'w') as cf:
                 cf.write(json.dumps(self.contact_json))
         elif self.contact_source == 'sql':
-            print('do sql source')
+            # print('do sql source')
+            self.sn.set_con_and_cur()
             self.contact_json = self.sn.run_query_file(os.path.join(self.sql_dir, 'trouble_children.sql'))
+            self.sn.close_con_and_cur()
         else:
             return 'oops, wrong source...'
 
@@ -95,7 +99,7 @@ class ApiHandler:
             if self.contact_source == 'api':
                 eval_replacement = str(row['id'])
             elif self.contact_source == 'sql':
-                eval_replacement = str(row)
+                eval_replacement = str(row[0])
             eval_url_query = eval_url_raw.replace('<<contact_id>>', eval_replacement)
             print(f'debugging: eval_url_query\n{eval_url_query}')
             begin = time.time()
@@ -105,12 +109,11 @@ class ApiHandler:
             eval_json_response = eval_res.json()
             end = time.time()
             if self.console_output:
-                print(f'''
-    Writing to eval_raw.json and making the eval_json_response variable had a duration of
+                print(f'''    Writing to eval_raw.json and making the eval_json_response variable had a duration of
     {round(end - begin, 4)} seconds.
     The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
     rn: {rn}
-    Progress: {round(((len(self.contact_json) - rn) / len(self.contact_json)) * 10, 2)}%'''
+    Progress: {round(((len(self.contact_json) - rn) / len(self.contact_json)) * 100, 2)}%'''
                       )
             if self.eval_json is None:
                 self.eval_json = eval_json_response
@@ -140,11 +143,10 @@ class ApiHandler:
                     comments_res = self.session.get(comments_url_query)
                     wf.write(comments_res.content)
                     end = time.time()
-                    print(f'''
-    Writing to eval_raw.json had a duration of {round(end - begin, 4)} seconds.
+                    print(f'''    Writing to eval_raw.json had a duration of {round(end - begin, 4)} seconds.
     The program has ran for {round(time.time() - self.object_creation_time, 4)} seconds.
     rn: {rn}
-    Progress: {round(((len(self.eval_json) - rn) / len(self.eval_json)) * 10, 2)}%'''
+    Progress: {round(((len(self.eval_json) - rn) / len(self.eval_json)) * 100, 2)}%'''
                           )
                 else:
                     print(f'jr: {jr["id"]} did not have any comments.')
@@ -165,13 +167,20 @@ class ApiHandler:
         :return: None
         :rtype: None
         """
+        # todo: Setup the split
+        # todo: Setup the daily total contacts pull
         # files_to_split = os.listdir(self.json_dir)
         # for file in files_to_split:
         #     with open(os.path.join(self.json_dir, file), 'r') as rf:
 
     def full_run(self):
         self._remove_temp_files()
-        fun_list = [self._get_forms, self._get_contacts, self._get_evaluations, self._get_comments]
+        fun_list = [
+            # self._get_forms,
+            self._get_contacts,
+            self._get_evaluations,
+            # self._get_comments,
+        ]
         for fun in fun_list:
             print(f'running function: {fun.__name__}')
             fun()
@@ -199,7 +208,7 @@ class ApiHandler:
                 self.sn.sql_command(copy_text_final)
         self.sn.sql_command('remove @my_uploader_stage')
         self._remove_temp_files()
-        print(f'The {self.__name__} function ended after {round(time.time() - self.object_creation_time, 4)} seconds.')
+        print(f'The {__name__} function ended after {round(time.time() - self.object_creation_time, 4)} seconds.')
 
     def _remove_temp_files(self):
         tmp_files = os.listdir(self.temp_dir)
