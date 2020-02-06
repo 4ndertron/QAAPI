@@ -43,7 +43,7 @@ class ApiHandler:
         self.table_pairs = {
             'forms.json': 'temp_calabrio_t_qa_forms_staging',
             'contacts_1.json': 'temp_calabrio_t_qa_contacts_staging',
-            'all_contacts.json': 'temp_calabrio_t_contacts_staging',
+            'all_contacts*.json': 'temp_calabrio_t_contacts_staging',
             'fix_eval_raw.json': 'temp_calabrio_t_qa_evaluations_staging',
             'fix_comments_raw.json': 'temp_calabrio_t_qa_evaluation_comments_staging',
             'fix_transcript_raw.json': 'temp_calabrio_t_qa_transcripts_staging',
@@ -247,43 +247,47 @@ class ApiHandler:
         # for file in files_to_split:
         #     with open(os.path.join(self.json_dir, file), 'r') as rf:
 
-    def _truncate_table(self, full_file_path, new_file_name):
-        if os.path.exists(full_file_path):
-            with open(os.path.join(self.sql_dir, 'truncate_table.sql')) as tf:
-                self.sn.sql_command(tf.read().replace('<<tn>>', self.table_pairs[new_file_name]))
+    def _truncate_table(self, full_file_path):
+        fn = os.path.basename(full_file_path)
+        with open(os.path.join(self.sql_dir, 'truncate_table.sql')) as tf:
+            self.sn.sql_command(tf.read().replace('<<tn>>', self.table_pairs[fn]))
 
     def _stage_file(self, full_file_path):
-        if os.path.exists(full_file_path):
-            with open(os.path.join(self.sql_dir, 'stage_file.sql'), 'r') as sf:
-                query_text_raw = sf.read()
-                query_text_raw = query_text_raw.replace('<<fp>>', full_file_path)
-                query_text_final = query_text_raw.replace('<<ac>>', 'true')
-                # Eventually turn the true/false value into a user defined dynamic field.
-                if self.console_output:
-                    print(query_text_final)
-                self.sn.sql_command(query_text_final)
+        with open(os.path.join(self.sql_dir, 'stage_file.sql'), 'r') as sf:
+            query_text_raw = sf.read()
+            query_text_raw = query_text_raw.replace('<<fp>>', full_file_path)
+            query_text_final = query_text_raw.replace('<<ac>>', 'true')
+            # Eventually turn the true/false value into a user defined dynamic field.
+            if self.console_output:
+                print(query_text_final)
+            self.sn.sql_command(query_text_final)
 
-    def _populate_table(self, full_file_path, new_file_name):
-        if os.path.exists(full_file_path):
-            with open(os.path.join(self.sql_dir, 'populate_table.sql')) as cf:
-                copy_text_raw = cf.read()
-                copy_text_raw = copy_text_raw.replace('<<tn>>', self.table_pairs[new_file_name])
-                copy_text_final = copy_text_raw.replace('<<pat>>', full_file_path)
-                print(copy_text_final)
-                self.sn.sql_command(copy_text_final)
+    def _populate_table(self, full_file_path):
+        fn = os.path.basename(full_file_path)
+        with open(os.path.join(self.sql_dir, 'populate_table.sql')) as cf:
+            copy_text_raw = cf.read()
+            copy_text_raw = copy_text_raw.replace('<<tn>>', self.table_pairs[fn])
+            copy_text_final = copy_text_raw.replace('<<pat>>', full_file_path)
+            print(copy_text_final)
+            self.sn.sql_command(copy_text_final)
 
     def run_table_updates(self):
         json_files = os.listdir(self.json_dir)
+        new_file_list = []
         for file in json_files:
             if self.all_contacts_re.match(file):
-                file_name = 'all_contacts.json'
+                file_name = 'all_contacts*.json'
             else:
                 file_name = file
-            file_path = os.path.join(self.json_dir, file)
-            self.sn.sql_command('remove @my_uploader_stage')
-            self._truncate_table(file_path, file_name)
+            if file_name not in new_file_list:
+                new_file_list.append(file_name)
+        self.sn.sql_command('remove @my_uploader_stage')
+        for f in new_file_list:
+            file_path = os.path.join(self.json_dir, f)
+            self._truncate_table(file_path)
             self._stage_file(file_path)
-            self._populate_table(file_path, file_name)
+            self._populate_table(file_path)
+        # self.sn.sql_command('remove @my_uploader_stage')
 
     def full_run(self, fun_list):
         """
