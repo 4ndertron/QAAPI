@@ -262,17 +262,21 @@ class ApiHandler:
                 print(query_text_final)
             self.sn.sql_command(query_text_final)
 
-    def _populate_table(self, full_file_path):
+    def _populate_table(self, full_file_path):  # incorrect table population
         fn = os.path.basename(full_file_path)
         with open(os.path.join(self.sql_dir, 'populate_table.sql')) as cf:
             copy_text_raw = cf.read()
-            copy_text_raw = copy_text_raw.replace('<<tn>>', self.table_pairs[fn])
-            copy_text_final = copy_text_raw.replace('<<pat>>', full_file_path)
+            copy_text_next = copy_text_raw.replace('<<tn>>', self.table_pairs[fn])
+            if self.all_contacts_re.match(fn):
+                copy_text_final = copy_text_next.replace('<<pat>>', 'all_contacts.*.json')
+            else:
+                copy_text_final = copy_text_next.replace('<<pat>>', fn)
             print(copy_text_final)
             self.sn.sql_command(copy_text_final)
 
     def run_table_updates(self):
         json_files = os.listdir(self.json_dir)
+        stage = '@my_uploader_stage'
         new_file_list = []
         for file in json_files:
             if self.all_contacts_re.match(file):
@@ -281,13 +285,13 @@ class ApiHandler:
                 file_name = file
             if file_name not in new_file_list:
                 new_file_list.append(file_name)
-        self.sn.sql_command('remove @my_uploader_stage')
+        self.sn.sql_command(f'remove {stage};')
         for f in new_file_list:
             file_path = os.path.join(self.json_dir, f)
             self._truncate_table(file_path)
             self._stage_file(file_path)
             self._populate_table(file_path)
-        # self.sn.sql_command('remove @my_uploader_stage')
+        # self.sn.sql_command(f'remove {stage};')
 
     def full_run(self, fun_list):
         """
