@@ -304,11 +304,12 @@ class ApiHandler:
         self._remove_temp_files()
         if type(fun_list).__name__ == 'list':
             for fun in fun_list:
-                if fun.__name__ == 'full_run' or fun.__name__ == 'run_table_updates':
-                    print(f'{fun.__name__} was passed to avoid an infinite loop of recursion.')
-                print(f'running function: {fun.__name__}')
-                fun()
-                print(f'function: {fun.__name__} ran with no errors.\n')
+                if type(fun).__name__ != 'NoneType':
+                    if fun.__name__ == 'full_run' or fun.__name__ == 'run_table_updates':
+                        print(f'{fun.__name__} was passed to avoid an infinite loop of recursion.')
+                    print(f'running function: {fun.__name__}')
+                    fun()
+                    print(f'function: {fun.__name__} ran with no errors.\n')
             self.run_table_updates()
             self._remove_temp_files()
             print(f'The {__name__} function ended after {round(time.time() - self.object_creation_time, 4)} seconds.')
