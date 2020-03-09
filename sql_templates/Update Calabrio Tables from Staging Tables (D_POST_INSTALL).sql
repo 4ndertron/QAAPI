@@ -61,23 +61,21 @@ MERGE INTO
 --     i) INSERT non-matches
 MERGE INTO
     d_post_install.temp_calabrio_t_contacts AS cc
-
-USING
-    (
-        SELECT
-            co.src:id::NUMBER AS contact_id
-          , CONVERT_TIMEZONE('UTC', 'America/Denver', DATEADD(ms, co.src:startTime::NUMBER, '1970-01-01')) AS contact_start_time
-          , 'https://calabriocloud.com/index.html#/recordings/' || co.src:id ||'/ccr' AS contact_url
-          , co.src:assocCallId::VARCHAR AS cjp_session_id
-        FROM
-            d_post_install.temp_calabrio_t_contacts_staging AS co
-        ORDER BY
-            contact_start_time
-    ) AS new
-ON
-    cc.contact_id = new.contact_id
-WHEN NOT MATCHED THEN
-    INSERT VALUES (new.contact_id, new.contact_start_time, new.contact_url, new.cjp_session_id)
+    USING
+        (
+            SELECT co.src:id::NUMBER                                                                              AS contact_id
+                 , CONVERT_TIMEZONE('UTC', 'America/Denver',
+                                    DATEADD(ms, co.src:startTime::NUMBER, '1970-01-01'))                          AS contact_start_time
+                 , 'https://calabriocloud.com/index.html#/recordings/' || co.src:id ||
+                   '/ccr'                                                                                         AS contact_url
+                 , co.src:assocCallId::VARCHAR                                                                    AS cjp_session_id
+            FROM d_post_install.temp_calabrio_t_contacts_staging AS co
+            ORDER BY contact_start_time
+        ) AS new
+    ON
+        cc.contact_id = new.contact_id
+    WHEN NOT MATCHED THEN
+        INSERT VALUES (new.contact_id, new.contact_start_time, new.contact_url, new.cjp_session_id)
 ;
 
 
@@ -214,4 +212,16 @@ INSERT INTO d_post_install.temp_calabrio_t_qa_evaluation_comments
                , question_id
                , created_date
     )
+;
+
+MERGE INTO
+    d_post_install.temp_calabrio_t_contacts_staging_backup AS cb
+    USING
+        d_post_install.temp_calabrio_t_contacts_staging AS cs
+    ON
+        cb.src:id::VARCHAR = cs.src:id::VARCHAR
+    WHEN MATCHED THEN
+        UPDATE SET src = cs.src
+    WHEN NOT MATCHED THEN
+        INSERT VALUES (cs.src)
 ;

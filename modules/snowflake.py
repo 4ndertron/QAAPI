@@ -7,7 +7,7 @@ class SnowflakeHandler:
     """
     Prerequisites:
         1) You need to create a JSON formatted Environment Variable, named "SNOWFLAKE_KEY", with the following keys.
-            1) USERNAME
+            1) USER
             2) PASSWORD
             3) ACCOUNT
             4) WAREHOUSE
@@ -19,11 +19,7 @@ class SnowflakeHandler:
 
     def __init__(self, console_output=False, schema=None):
         self.console_output = console_output
-        self.user = ''
-        self.password = ''
-        self.account = ''
-        self.warehouse = ''
-        self.database = ''
+        self.snowflake_credentials = {}
         self.temp_query = ''
         self.schema = schema
         self.con = False
@@ -34,22 +30,15 @@ class SnowflakeHandler:
         if self.console_output:
             print('Collecting Snowflake credentials from system environment...')
         snowflake_json = json.loads(os.environ['SNOWFLAKE_KEY'])
-        self.user = snowflake_json['USERNAME']
-        self.password = snowflake_json['PASSWORD']
-        self.account = snowflake_json['ACCOUNT']
-        self.warehouse = snowflake_json['WAREHOUSE']
-        self.database = snowflake_json['DATABASE']
+        for k, v in snowflake_json.items():
+            self.snowflake_credentials[k.lower()] = v
+        self.snowflake_credentials['schema'] = self.schema
         if self.console_output:
             print('credentials have been collected and assigned')
 
     def set_con_and_cur(self):
-        self.con = snowflake.connector.connect(
-            user=self.user,
-            password=self.password,
-            account=self.account,
-            warehouse=self.warehouse,
-            database=self.database,
-            schema=self.schema
+        self.con = snowflake.connector.connect(  # Create the snowflake connection in the class instance variable
+            **self.snowflake_credentials  # Use the credentials found in the environment variable
         )
         self.cur = self.con.cursor()
 

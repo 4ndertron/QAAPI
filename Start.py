@@ -16,7 +16,7 @@ def all_contacts():
     Create an api object for collecting all of the contacts.
     """
     # begin_all = dt.date.fromisoformat('2019-03-01')
-    begin_all = dt.date.today() + dt.timedelta(-8)
+    begin_all = dt.date.today() + dt.timedelta(-16)
 
     api_contacts = ApiHandler(
         console_output=True,
@@ -72,10 +72,10 @@ def main():
     qa_contact_thread = threading.Thread(target=qa_contacts, name='qa_contacts')
     table_updates_thread = threading.Thread(target=table_update_only, name='table_updates')
 
-    if dt.date.today().isoweekday() == 2:
-        qa_contact_thread.start()
-    all_contact_thread.start()
-    # table_updates_thread.start()
+    # if dt.date.today().isoweekday() == 1:
+    #     qa_contact_thread.start()
+    # all_contact_thread.start()
+    table_updates_thread.start()
 
     while threading.active_count() > 1:
         print(f'{threading.active_count() - 1} extra processes running.\n')
