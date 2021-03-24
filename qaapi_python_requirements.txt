@@ -46,7 +46,7 @@ python-docx==0.8.10
 pytz==2019.2
 requests==2.22.0
 requests-oauthlib==1.2.0
-rsa==4.0
+rsa==4.1
 s3transfer==0.2.1
 selenium==3.141.0
 six==1.12.0
