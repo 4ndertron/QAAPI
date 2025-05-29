@@ -36,7 +36,7 @@ pyarrow==0.15.1
 pyasn1==0.4.5
 pyasn1-modules==0.2.5
 pycparser==2.19
-pycryptodomex==3.8.2
+pycryptodomex==3.19.1
 PyJWT==2.4.0
 pyOpenSSL==19.0.0
 pyparsing==2.4.2
